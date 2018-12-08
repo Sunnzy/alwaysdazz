@@ -1,0 +1,98 @@
+package cn.seowang.aa;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+//文件的服务端
+public class MyFileServer {
+		
+	public static void main(String[] args) throws IOException //主方法
+	{
+		//创建端口号和服务器存储路径
+		int port = 9999;
+		
+		String savePath = "C:\\Develop_Code\\BBB";
+		
+		receiveFile(savePath,port);
+		
+	}
+	
+	public static void receiveFile(String savePath,int port) throws IOException //自定义方法
+	{
+		
+		ServerSocket ss = new ServerSocket(port); //建立服务器
+		
+		Socket sk = ss.accept(); //接收客户端
+		
+		InputStream is = sk.getInputStream(); //建立连接流（接收流）
+		
+		DataInputStream dis1 = new DataInputStream(is); //这里的is 与下面接收文件流通用 因为都是sk.getinputstream 建立的连接
+		
+		//先收名称
+		String recFileName = dis1.readUTF(); //字符串用string来接文件名称 并且要用UTF格式
+		
+		//回复信息
+		OutputStream os = sk.getOutputStream(); //建立连接流（发送流）
+		
+		DataOutputStream dos1 = new DataOutputStream(os);//这里的os下面的发送流要用 因为是sk.getoutputstrem建立的连接
+		
+		dos1.writeUTF(recFileName); //回复给客户端收到的名称 用write写
+		
+		
+		//拼接
+		String absPath = savePath+"\\"+recFileName; //这里是拼接路径 将路径与文件名结合在一起 要用 “/” 连接 文件名可以随意起
+		
+		//从网络中读取信息   并同时存储到本地文件中
+		
+		FileOutputStream nativeFos = new FileOutputStream(absPath); //③写入本地
+		
+		BufferedOutputStream nativeBos = new BufferedOutputStream(nativeFos); // ②用buffered可以加速写入本地，提高效率
+		
+		
+		BufferedInputStream netBis = new BufferedInputStream(is); // ①从网络接收文件 
+		// 建立缓存区 更高更快的下载并写入
+		int len = 0; 
+		
+		byte[] netBuff = new byte[1024];  //只能用byte格式的 并且下载速度最好是1024的倍数 否则会遗漏字节
+	
+		while((len = netBis.read(netBuff))!=-1) //这层的意思是 以1024字节的buff读网络接收端的文件 当等于-1时截止。
+                                                                              //用while循环 当读取为-1时截止，
+		{
+			
+			//边从网络读取   边向本地输出  
+			nativeBos.write(netBuff, 0, len); // 本地写入 以netbuff为载体 从0开始每次读len的字节；
+			nativeBos.flush(); //写完记得刷新 ，好的机器不用刷新 但也应该有
+			
+		}
+		
+		//关闭本地流，先打开的后关闭；
+		nativeBos.close(); // ① 先关闭本地加速存储的流
+		nativeFos.close(); // ② 后关闭本地慢速存储流 
+		
+		//回复信息！ ---> 回复文件大小！
+		
+		File nativeFile = new File(absPath); //把本地文件路径变为文件格式 
+		
+		long size = nativeFile.length();  // 获取文件的长度（文件大小）给定义的变量 
+		
+		//发送
+		DataOutputStream dos2 = new DataOutputStream(os); //发送文件 先打开发送流
+		
+		dos2.writeLong(size); // 写取长度为size
+		
+		sk.shutdownOutput(); // 关闭输出管道，结束传输
+		
+		
+		
+	}
+
+}
