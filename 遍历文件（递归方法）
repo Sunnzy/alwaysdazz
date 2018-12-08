@@ -1,0 +1,55 @@
+package Assessment.digui;
+
+import java.io.File;
+
+public class DiGui {
+
+	private static File[] files;
+	public static void main(String[] args)
+	{
+		String pathfile ="/home/alwaysdazz";
+		
+		bianli(pathfile);
+	}
+		public static void bianli(String pathfile)
+		{
+		
+		//先把路径写上
+		
+		//将路径赋值给File
+		File file=new File(pathfile);
+		//判断如果是file文件则输出 否则返回
+
+		//如果这个文件是文件夹 输出文件夹名字 并遍历这个目录下的文件
+		if(file.isDirectory())//如果是文件则开始循环
+		{	
+			File[] files = file.listFiles();//将file的文件放入数组files
+			System.out.println(file.getName());	//并获取文件的名字
+			
+			for(File fi:files)//for循环遍历输出文件
+			{
+				System.out.println(fi.getName());
+				//二级判断 如果是File文件名
+			if(fi.isDirectory())
+			{
+				System.out.println(fi.getName());
+				String path=fi.getAbsolutePath();
+				//调用方法再次递归
+				bianli(path);
+			}
+				
+			}			
+			
+			
+		}
+		
+		}
+		
+		}
+		
+		
+		
+
+	
+	
+	
