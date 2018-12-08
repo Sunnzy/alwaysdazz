@@ -1,0 +1,149 @@
+package cn.seowang.aa;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+/**
+ * 文件发送的客户端
+ *
+ */
+public class MyFileClient {
+	
+	public static void main(String[] args) throws UnknownHostException, IOException
+	{
+		/**
+		 * 功能：发一个文件
+		 * 
+		 * 分析：
+		 * 
+		 * 		1、需要一个文件
+		 * 
+		 * 		2、客户端  ---  先从 本地文件中读取    向网络中的连接发送
+		 * 
+		 * 		  服务端        ----  先从网络的链接中接收   存储到服务端的本地文件中
+		 * 
+		 * 		3、
+		 */
+		
+		//创建本地文件路径， 设置好服务端的ip地址 端口 
+		
+		String nativeFilePath = "C:\\Code\\Client1.java";
+		String ipAddress = "127.0.0.1";
+		int port = 9999;
+		doCopyByNet(nativeFilePath,ipAddress,port);
+		
+		
+	}
+	
+	public static void doCopyByNet(String nativeFilePath,String ipAddress,int port) throws UnknownHostException, IOException
+	{	
+			
+		// 先判断有无此文件路径，如果没有则返回		
+		if(null == nativeFilePath)
+		{	
+			return;
+		}
+		
+		//判断此路径下的文件是否存在，如果不存在则返回
+		File file = new File(nativeFilePath);
+		if(!file.exists())
+		{
+			return;
+			
+		}
+		
+		//先发送一个文件名称：
+		
+		String fileName = file.getName(); //用getname方法 获取文件名 赋值给filename
+		
+		//发名称：
+		Socket sk = new Socket(ipAddress,port);//先建立通道
+		
+		OutputStream os = sk.getOutputStream();// 建立发送流
+		
+		DataOutputStream dos1 = new DataOutputStream(os);
+		
+		dos1.writeUTF(fileName);//写入文件名称
+		
+		//等待确认
+		
+		InputStream is = sk.getInputStream();//建立接收流
+		
+		DataInputStream dis1 = new DataInputStream(is);
+		
+		String msg1 = dis1.readUTF();//用string字符串接收 UTF格式
+		
+		if(!fileName.equals(msg1))//判断如果名字不相同则返回
+		{
+			return;
+		}
+		System.out.println("名称接收完毕");//否则 接收完毕
+		
+		
+		//发文件
+		//从本地文件中读取    边读取  边发送
+		
+		int len = 0;
+		
+		byte[] nativeBuff = new byte[1024]; //必须用byte字节
+		
+		FileInputStream nativeFis = new FileInputStream(nativeFilePath);//从本地抓取文件
+		
+		BufferedInputStream bis = new BufferedInputStream(nativeFis);// 用buffered 效率更快
+		
+		
+		//创建  基于 网络的输出流的  BufferedOutputStream  高效 
+		
+		BufferedOutputStream netBos = new BufferedOutputStream(os);//从网络发出
+		
+		while((  len = bis.read(nativeBuff) )!= -1)
+		{
+			
+			//本地读取   nativeBuff  ---> 发送！ --->  向网络的输出流
+			netBos.write(nativeBuff, 0, len);
+			
+			netBos.flush();
+			
+		}
+		
+		sk.shutdownOutput();//关闭向外输出的通道
+		
+		//关闭本地流
+		bis.close();//①先关闭加速抓取的流
+		nativeFis.close(); //②在关闭慢速抓取流
+		
+		
+		//文件发送完毕！
+		
+		//等待检查信息  -- 文件大小！
+		
+		long size = file.length(); //将文件的大小赋值给size
+		
+		//从网络接收一个长度
+		
+		DataInputStream dis2 = new DataInputStream(is);//建立一个输入流 接收服务端发来的文件大小
+		
+		long recSize = dis2.readLong();// 创建一个接收文件长度的 recsize 
+		
+		if(size == recSize) // 如果俩个相同则接收完成
+		{
+			System.out.println("接收完成！");
+			sk.close();//关闭通道
+		}
+		
+		
+		
+		
+		
+	}
+
+}
